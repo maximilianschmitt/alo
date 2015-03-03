@@ -26,126 +26,146 @@ class Player extends Phaser.Sprite {
         { name: 'crouch', from: 'grow3', to: 'grow2' },
         { name: 'crouch', from: 'grow2', to: 'grow1' },
         { name: 'crouch', from: 'grow1', to: 'default' },
-        { name: 'crouch', from: 'default', to: 'crouched' },
+        { name: 'crouch', from: ['default', 'walkingLeft', 'walkingRight'], to: 'crouched' },
         { name: 'grow', from: 'default', to: 'grow1' },
         { name: 'grow', from: 'grow1', to: 'grow2' },
         { name: 'grow', from: 'grow2', to: 'grow3' },
-        { name: 'walkRight', from: ['default', 'walkingLeft'], to: 'walkingRight' },
-        { name: 'walkLeft', from: ['default', 'walkingRight'], to: 'walkingLeft' }
+        { name: 'walkRight', from: ['default', 'walkingLeft', 'crouched'], to: 'walkingRight' },
+        { name: 'walkLeft', from: ['default', 'walkingRight', 'crouched'], to: 'walkingLeft' },
+        { name: 'idle', from: ['walkingLeft', 'walkingRight', 'crouched'], to: 'default' }
       ]
     });
     this.speed = 200;
     this.jumpSpeed = 625;
-    this.jumpGravity = 2500;
+    this.defaultGravity = 2500;
     this.chargedJumpSpeed = 470;
     this.chargedJumpGravity = 1000;
     this.slamSpeed = 600;
     this.crouchSpeedBoost = 1.8;
     this.anchor.setTo(0.5, 1);
-    this.animations.add('walk-right', [0, 1, 2, 3, 4, 5, 6, 7], 20, true);
-    this.animations.add('walk-left', [8, 9, 10, 11, 12, 13, 14, 15], 20, true);
+    this.animations.add('walkingRight', [0, 1, 2, 3, 4, 5, 6, 7], 20, true);
+    this.animations.add('walkingLeft', [8, 9, 10, 11, 12, 13, 14, 15], 20, true);
     this.animations.add('crouched', [16]);
     this.animations.add('default', [17]);
-    this.animations.add('grow-1', [18]);
-    this.animations.add('grow-2', [19]);
-    this.animations.add('grow-3', [20]);
-    this.animations.play('default');
+    this.animations.add('grow1', [18]);
+    this.animations.add('grow2', [19]);
+    this.animations.add('grow3', [20]);
 
     game.physics.enable(this, Phaser.Physics.ARCADE);
     console.log(this.state);
-    this.body.gravity.y = this.jumpGravity;
+    this.body.gravity.y = this.defaultGravity;
   }
   canWalk() {
     return ['default', 'walkingLeft', 'walkingRight', 'crouched'].indexOf(this.state.current) !== -1;
   }
   crouch() {
-    if (this.state.can('crouch')) {
-      this.state.crouch();
+    if (this.state.is('crouched') && this.onGround) {
+      this.body.drag.setTo(1.5 * this.speed, 0);
     }
 
-    var canWalk = ['default', 'walk-left', 'walk-right', 'crouched'].indexOf(this.animations.currentAnim.name) !== -1;
-    if (canWalk) {
-      this.animations.play('crouched');
-      if (this.lastTickState !== 'crouched') {
-        this.body.velocity.x *= this.crouchSpeedBoost;
-        if (!this.body.touching.down) {
-          this.body.velocity.y = this.slamSpeed;
-        }
-      }
-      // drag on floor
-      if (this.body.touching.down) {
-        this.body.drag.setTo(this.speed * 1.5, 0);
-      } else {
-        this.body.drag.setTo(0.5 * this.speed, 0);
-      }
-    } else if (currentState === 'grow-3') {
-      this.animations.play('grow-2');
-    } else if (currentState === 'grow-2') {
-      this.animations.play('grow-1');
-    } else if (currentState === 'grow-1') {
-      this.animations.play('default');
+    if (this.state.is('crouched') && !this.onGround) {
+      this.body.drag.setTo(0.5 * this.speed, 0);
+    }
+
+    if (this.state.cannot('crouch')) {
+      return;
+    }
+    
+    this.state.crouch();
+
+    // slide on the ground
+    if (this.state.is('crouched') && this.onGround) {
+      this.body.velocity.x *= this.crouchSpeedBoost;
+    }
+
+    // slam when in the air
+    if (this.state.is('crouched') && !this.onGround) {
+      this.body.velocity.y = this.slamSpeed;
     }
   }
+  grow() {
+    if (this.state.cannot('grow')) {
+      return;
+    }
+
+    this.state.grow();
+  }
+  jump() {
+    if (this.onGround) {
+      this.body.velocity.y = -this.jumpSpeed;
+
+      if (this.state.is('crouched')) {
+        this.body.velocity.y = -this.chargedJumpSpeed;
+        this.body.gravity.y = this.chargedJumpGravity;
+      }
+    }
+  }
+  walkLeft() {
+    if (this.canWalk() && this.body.velocity.x > -this.speed) {
+      this.body.velocity.x = -this.speed;
+    }
+
+    if (this.state.can('walkLeft')) {
+      this.state.walkLeft();
+    }
+  }
+  walkRight() {
+    if (this.canWalk() && this.body.velocity.x < this.speed) {
+      this.body.velocity.x = this.speed;
+    }
+
+    if (this.state.can('walkRight')) {
+      this.state.walkRight();
+    }
+  }
+  idle() {
+    if (this.state.cannot('idle')) {
+      return;
+    }
+
+    this.state.idle();
+  }
+  noButtonPressed() {
+    return !(this.growButton.isDown || this.crouchButton.isDown || this.leftButton.isDown || this.rightButton.isDown);
+  }
+  evaluateState() {
+    this.was = {
+      inAir: this.inAir,
+      onGround: this.onGround,
+      moving: this.moving
+    };
+
+    this.inAir = !this.body.touching.down;
+    this.onGround = this.body.touching.down;
+    this.moving = this.body.velocity.x !== 0;
+  }
   update() {
-    var canWalk = ['default', 'walk-left', 'walk-right', 'crouched'].indexOf(this.animations.currentAnim.name) !== -1;
-    // reset stuff
-    if (this.body.touching.down) {
-      this.body.gravity.y = this.jumpGravity;
+    this.evaluateState();
+
+    if (this.onGround) {
+      this.body.gravity.y = this.defaultGravity;
       this.body.drag.setTo(this.speed * 8, 0);
     }
 
     if (this.crouchButton.isDown) {
       this.crouch();
-    } else if (this.leftButton.isDown && canWalk) {
-      // keep momentum in the air
-      this.body.velocity.x = this.body.touching.down && this.body.velocity.x < -this.speed ? this.body.velocity.x : -this.speed;
-      this.animations.play('walk-left');
-    } else if (this.rightButton.isDown && canWalk) {
-      // keep momentum in the air
-      this.body.velocity.x = this.body.touching.down && this.body.velocity.x > this.speed ? this.body.velocity.x : this.speed;
-      this.animations.play('walk-right');
-    } else if (canWalk) {
-      this.animations.play('default');
+    } else if (this.leftButton.isDown) {
+      this.walkLeft();
+    } else if (this.rightButton.isDown) {
+      this.walkRight();
+    } else if (this.growButton.isDown) {
+      this.grow();
     }
 
-    if (this.growButton.isDown) {
-      var currentState = this.animations.currentAnim.name;
-      if (currentState === 'grow-1') {
-        this.animations.play('grow-2');
-      } else if (currentState === 'grow-2') {
-        this.animations.play('grow-3');
-      } else if (currentState === 'default') {
-        this.animations.play('grow-1');
-      } else if (currentState === 'crouched') {
-        this.animations.play('default');
-      }
+    if (this.jumpButton.isDown) {
+      this.jump();
     }
 
-    if (canWalk && this.jumpButton.isDown && this.body.touching.down) {
-      this.body.velocity.y = -this.jumpSpeed;
-      if (this.lastTickState === 'crouched') {
-        this.body.velocity.y = -this.chargedJumpSpeed;
-        this.body.gravity.y = this.chargedJumpGravity;
-      }
+    if (this.noButtonPressed()) {
+      this.idle();
     }
 
-    if (!(this.growButton.isDown || this.crouchButton.isDown || this.leftButton.isDown || this.rightButton.isDown)) {
-      if (this.lastTickState === 'crouched') {
-        this.animations.play('default');
-      }
-    }
-
-    var newState = this.animations.currentAnim.name;
-
-    if (newState === 'walk-left' || newState === 'walk-right') {
-      if (this.lastTickState !== 'walk-left' && this.lastTickState !== 'walk-right') {
-        // steps.play();
-      }
-    } else {
-      // steps.stop();
-    }
-
-    this.lastTickState = newState;
+    this.animations.play(this.state.current);
   }
 }
 
