@@ -59,10 +59,6 @@ class Player extends Phaser.Sprite {
     return ['default', 'walkingLeft', 'walkingRight', 'crouched'].indexOf(this.state.current) !== -1;
   }
   crouch() {
-    if (this.state.is('crouched') && this.onGround) {
-      this.body.drag.setTo(1.5 * this.speed, 0);
-    }
-
     if (this.state.is('crouched') && !this.onGround) {
       this.body.drag.setTo(0.5 * this.speed, 0);
     }
@@ -144,7 +140,7 @@ class Player extends Phaser.Sprite {
 
     if (this.onGround) {
       this.body.gravity.y = this.defaultGravity;
-      this.body.drag.setTo(this.speed * 8, 0);
+      this.body.drag.setTo(1.5 * this.speed, 0);
     }
 
     if (this.crouchButton.isDown) {
