@@ -1,0 +1,6 @@
+{
+  "name": "alo",
+  "dependencies": {
+    "phaser": "~2.2.2"
+  }
+}
