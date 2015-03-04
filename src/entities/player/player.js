@@ -11,14 +11,14 @@ class Player extends Phaser.Sprite {
       this.leftButton = game.input.keyboard.addKey(Phaser.Keyboard.A);
       this.rightButton = game.input.keyboard.addKey(Phaser.Keyboard.D);
       this.crouchButton = game.input.keyboard.addKey(Phaser.Keyboard.S);
-      this.growButton = game.input.keyboard.addKey(Phaser.Keyboard.W);
+      this.upButton = game.input.keyboard.addKey(Phaser.Keyboard.W);
     } else {
       super(game, x, y, 'player');
       this.jumpButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
       this.leftButton = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
       this.rightButton = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
       this.crouchButton = game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
-      this.growButton = game.input.keyboard.addKey(Phaser.Keyboard.UP);
+      this.upButton = game.input.keyboard.addKey(Phaser.Keyboard.UP);
     }
     this.state = StateMachine.create({
       initial: 'default',
@@ -138,7 +138,7 @@ class Player extends Phaser.Sprite {
     this.state.idle();
   }
   noButtonPressed() {
-    return !(this.growButton.isDown || this.crouchButton.isDown || this.leftButton.isDown || this.rightButton.isDown);
+    return !(this.upButton.isDown || this.crouchButton.isDown || this.leftButton.isDown || this.rightButton.isDown);
   }
   evaluateState() {
     this.was = {
@@ -164,6 +164,21 @@ class Player extends Phaser.Sprite {
 
     this.climbable = null;
   }
+  whenPressingDown() {
+    this.crouch();
+  }
+  whenPressingLeft() {
+    this.walkLeft();
+  }
+  whenPressingRight() {
+    this.walkRight();
+  }
+  whenPressingUp() {
+    this.grow();
+  }
+  whenPressingJump() {
+    this.jump();
+  }
   update() {
     this.evaluateState();
 
@@ -173,17 +188,17 @@ class Player extends Phaser.Sprite {
     }
 
     if (this.crouchButton.isDown) {
-      this.crouch();
+      this.whenPressingDown();
     } else if (this.leftButton.isDown) {
-      this.walkLeft();
+      this.whenPressingLeft();
     } else if (this.rightButton.isDown) {
-      this.walkRight();
-    } else if (this.growButton.isDown) {
-      this.grow();
+      this.whenPressingRight();
+    } else if (this.upButton.isDown) {
+      this.whenPressingUp();
     }
 
     if (this.jumpButton.isDown) {
-      this.jump();
+      this.whenPressingJump();
     }
 
     if (this.noButtonPressed()) {
