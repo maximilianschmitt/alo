@@ -49,6 +49,9 @@ class Player extends Phaser.Sprite {
     game.physics.enable(this, Phaser.Physics.ARCADE);
     this.body.gravity.y = this.defaultGravity;
   }
+  introducePlayer(player) {
+    this.nearbyPlayers.push(player);
+  }
   onCrouch() {
     // crouch speed bonus
     this.body.velocity.x *= this.crouchSpeedBoost;
@@ -67,20 +70,17 @@ class Player extends Phaser.Sprite {
       this.body.drag.x = 1.5 * this.speed;
     }
   }
-  grow() {
-    // if (this.state.is('normal') && this.climbable) {
-    //   this.onLadder = !this.onGround;
-    //   this.body.gravity.y = 0;
-    //   this.body.drag.y = 2000;
-    //   this.body.velocity.y = -200;
-    //   return;
-    // }
-
-    // if (this.state.cannot('grow')) {
-    //   return;
-    // }
-
-    // this.state.grow();
+  climb() {
+    this.body.velocity.y = -200;
+  }
+  onEnterLadder() {
+    this.body.gravity.y = 0;
+    this.body.drag.y = 2000;
+  }
+  onLeaveLadder() {
+    this.climbing = false;
+    this.body.gravity.y = this.defaultGravity;
+    this.body.drag.y = 0;
   }
   jump() {
     this.body.velocity.y = -this.jumpSpeed;
@@ -91,7 +91,7 @@ class Player extends Phaser.Sprite {
   }
   walkLeft() {
     if (this.inAir && this.body.velocity.x < -this.speed) {
-      this.body.velocity.x = -this.body.velocity.x;
+      this.body.velocity.x = this.body.velocity.x;
     } else {
       this.body.velocity.x = -this.speed;
     }
@@ -107,12 +107,24 @@ class Player extends Phaser.Sprite {
     this.was = {
       inAir: this.inAir,
       onGround: this.onGround,
-      moving: this.moving
+      moving: this.moving,
+      onLadder: this.onLadder
     };
+
+    this.ladder = this.nearbyPlayers
+                  .filter(player => player.stance.is('ladder') && Math.abs(player.x - this.x) < 15)
+                  .sort((a, b) => {
+                    return Math.abs(a.x - this.x) - Math.abs(a.x - this.x);
+                  })[0];
 
     this.inAir = !this.body.touching.down;
     this.onGround = this.body.touching.down;
     this.moving = this.body.velocity.x !== 0;
+    this.onLadder = this.onLadder && this.ladder && this.inAir;
+  }
+  preUpdate() {
+    super.preUpdate.apply(this, arguments);
+    this.nearbyPlayers = [];
   }
   update() {
     this.evaluateState();
@@ -120,6 +132,7 @@ class Player extends Phaser.Sprite {
     if (this.onGround) {
       this.body.gravity.y = this.defaultGravity;
       this.body.drag.x = 8 * this.speed;
+      this.body.drag.y = 0;
     }
 
     this.processInput();
@@ -143,6 +156,16 @@ class Player extends Phaser.Sprite {
 
     if (this.walkingRight) {
       this.walkRight();
+    }
+
+    if (!this.was.onLadder && this.onLadder) {
+      this.onEnterLadder();
+    } else if (this.was.onLadder && !this.onLadder) {
+      this.onLeaveLadder();
+    }
+
+    if (this.climbing) {
+      this.climb();
     }
   }
   playAnimation() {
@@ -175,12 +198,22 @@ class Player extends Phaser.Sprite {
       this.walkingRight = false;
     }
 
-    if (this.upButton.isDown && !this.moving && this.stance.can('rise')) {
-      this.stance.rise();
+    if (this.upButton.isDown) {
+      if (this.ladder) {
+        this.onLadder = true;
+        this.climbing = true;
+      } else if (this.onGround && !this.moving && this.stance.can('rise')) {
+        this.stance.rise();
+      }
+    } else {
+      this.climbing = false;
     }
 
     if (this.jumpButton.isDown && this.onGround) {
       this.jumping = true;
+      if (this.stance.is('ladder')) {
+        this.stance.drop();
+      }
     } else {
       this.jumping = false;
     }
