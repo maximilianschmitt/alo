@@ -34,6 +34,7 @@ class Player extends Phaser.Sprite {
     });
     this.defaultGravity = 2500;
     this.speed = 200;
+    this.maxSpeed = 1000;
     this.jumpSpeed = 625;
     this.superJumpSpeed = 470;
     this.superJumpGravity = 1000;
@@ -48,6 +49,7 @@ class Player extends Phaser.Sprite {
 
     game.physics.enable(this, Phaser.Physics.ARCADE);
     this.body.gravity.y = this.defaultGravity;
+    this.body.collideWorldBounds = true;
   }
   introducePlayer(player) {
     this.nearbyPlayers.push(player);
@@ -133,6 +135,11 @@ class Player extends Phaser.Sprite {
       this.body.gravity.y = this.defaultGravity;
       this.body.drag.x = 8 * this.speed;
       this.body.drag.y = 0;
+    }
+
+    // dont accelerate into infinity
+    if (Math.abs(this.body.velocity.x) > this.maxSpeed) {
+      this.body.velocity.x = Math.sign(this.body.velocity.x) * this.maxSpeed;
     }
 
     this.processInput();

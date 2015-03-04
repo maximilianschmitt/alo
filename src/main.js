@@ -23,6 +23,7 @@ function create() {
   gof.register('flower', Flower);
   game.add = gof;
   game.stage.backgroundColor = '#443a4f';
+  game.world.setBounds(0, 0, 5*568, 320);
 
   game.sound.mute = true;
   steps = game.add.audio('player-steps', 1, true);
@@ -45,6 +46,7 @@ function create() {
   tree.animations.play('grow');
 
   player = game.add.player(24, game.world.height - 32, false);
+  game.camera.follow(player);
   // player2 = game.add.player(game.world.width - 24, game.world.height - 32, true);
   
 
@@ -91,7 +93,7 @@ function pixelFiller(context) {
 }
 
 function render() {
-  // game.debug.bodyInfo(player, 20, 20, '#ffffff');
+  game.debug.bodyInfo(player, 20, 20, '#ffffff');
 }
 
 function introducePlayers(player1, player2) {
