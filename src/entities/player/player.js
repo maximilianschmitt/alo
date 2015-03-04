@@ -10,113 +10,90 @@ class Player extends Phaser.Sprite {
       this.jumpButton = game.input.keyboard.addKey(Phaser.Keyboard.SHIFT);
       this.leftButton = game.input.keyboard.addKey(Phaser.Keyboard.A);
       this.rightButton = game.input.keyboard.addKey(Phaser.Keyboard.D);
-      this.crouchButton = game.input.keyboard.addKey(Phaser.Keyboard.S);
+      this.downButton = game.input.keyboard.addKey(Phaser.Keyboard.S);
       this.upButton = game.input.keyboard.addKey(Phaser.Keyboard.W);
     } else {
       super(game, x, y, 'player');
       this.jumpButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
       this.leftButton = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
       this.rightButton = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
-      this.crouchButton = game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
+      this.downButton = game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
       this.upButton = game.input.keyboard.addKey(Phaser.Keyboard.UP);
     }
-    this.state = StateMachine.create({
-      initial: 'default',
+    this.stance = StateMachine.create({
+      initial: 'normal',
       events: [
-        { name: 'crouch', from: 'grow3', to: 'grow2' },
-        { name: 'crouch', from: 'grow2', to: 'grow1' },
-        { name: 'crouch', from: 'grow1', to: 'default' },
-        { name: 'crouch', from: ['default', 'walkingLeft', 'walkingRight'], to: 'crouched' },
-        { name: 'grow', from: 'default', to: 'grow1' },
-        { name: 'grow', from: 'grow1', to: 'grow2' },
-        { name: 'grow', from: 'grow2', to: 'grow3' },
-        { name: 'walkRight', from: ['default', 'walkingLeft', 'crouched'], to: 'walkingRight' },
-        { name: 'walkLeft', from: ['default', 'walkingRight', 'crouched'], to: 'walkingLeft' },
-        { name: 'idle', from: ['walkingLeft', 'walkingRight', 'crouched'], to: 'default' }
-      ]
+        { name: 'rise', from: 'normal', to: 'ladder' },
+        { name: 'drop', from: 'ladder', to: 'normal' },
+        { name: 'drop', from: 'normal', to: 'crouching' },
+        { name: 'normal', from: 'crouching', to: 'normal' }
+      ],
+      callbacks: {
+        onentercrouching: this.onCrouch.bind(this)
+      }
     });
+    this.defaultGravity = 2500;
     this.speed = 200;
     this.jumpSpeed = 625;
-    this.defaultGravity = 2500;
-    this.chargedJumpSpeed = 470;
-    this.chargedJumpGravity = 1000;
+    this.superJumpSpeed = 470;
+    this.superJumpGravity = 1000;
     this.slamSpeed = 600;
     this.crouchSpeedBoost = 1.8;
     this.anchor.setTo(0.5, 1);
     this.animations.add('walkingRight', [0, 1, 2, 3, 4, 5, 6, 7], 20, true);
     this.animations.add('walkingLeft', [8, 9, 10, 11, 12, 13, 14, 15], 20, true);
-    this.animations.add('crouched', [16]);
-    this.animations.add('default', [17]);
-    this.animations.add('grow1', [18]);
-    this.animations.add('grow2', [19]);
-    this.animations.add('grow3', [20]);
+    this.animations.add('crouching', [16]);
+    this.animations.add('normal', [17]);
+    this.animations.add('ladder', [20]);
 
     game.physics.enable(this, Phaser.Physics.ARCADE);
-    console.log(this.state);
     this.body.gravity.y = this.defaultGravity;
   }
-  canWalk() {
-    return ['default', 'walkingLeft', 'walkingRight', 'crouched'].indexOf(this.state.current) !== -1;
-  }
-  crouch() {
-    if (this.state.is('crouched') && !this.onGround) {
-      this.body.drag.x = 0.5 * this.speed;
-    }
-
-    if (this.state.is('crouched') && this.onGround) {
-      this.body.drag.x = 1.5 * this.speed;
-    }
-
-    if (this.state.cannot('crouch')) {
-      return;
-    }
-    
-    this.state.crouch();
-
+  onCrouch() {
     // crouch speed bonus
-    if (this.state.is('crouched')) {
-      this.body.velocity.x *= this.crouchSpeedBoost;
-    }
+    this.body.velocity.x *= this.crouchSpeedBoost;
 
     // slam when in the air
-    if (this.state.is('crouched') && !this.onGround) {
+    if (this.inAir) {
       this.body.velocity.y = this.slamSpeed;
     }
   }
+  crouch() {
+    if (this.inAir) {
+      this.body.drag.x = 0.5 * this.speed;
+    }
+
+    if (this.onGround) {
+      this.body.drag.x = 1.5 * this.speed;
+    }
+  }
   grow() {
-    if (this.state.is('default') && this.climbable) {
-      this.onLadder = !this.onGround;
-      this.body.gravity.y = 0;
-      this.body.drag.y = 2000;
-      this.body.velocity.y = -200;
-      return;
-    }
+    // if (this.state.is('normal') && this.climbable) {
+    //   this.onLadder = !this.onGround;
+    //   this.body.gravity.y = 0;
+    //   this.body.drag.y = 2000;
+    //   this.body.velocity.y = -200;
+    //   return;
+    // }
 
-    if (this.state.cannot('grow')) {
-      return;
-    }
+    // if (this.state.cannot('grow')) {
+    //   return;
+    // }
 
-    this.state.grow();
+    // this.state.grow();
   }
   jump() {
-    if (this.onGround) {
-      this.body.velocity.y = -this.jumpSpeed;
-
-      if (this.state.is('crouched')) {
-        this.body.velocity.y = -this.chargedJumpSpeed;
-        this.body.gravity.y = this.chargedJumpGravity;
-      }
-    }
+    this.body.velocity.y = -this.jumpSpeed;
+  }
+  superJump() {
+    this.body.velocity.y = -this.superJumpSpeed;
+    this.body.gravity.y = this.superJumpGravity;
   }
   walkLeft() {
     if (this.inAir && this.body.velocity.x < -this.speed) {
       this.body.velocity.x = -this.body.velocity.x;
     } else {
       this.body.velocity.x = -this.speed;
-    }
-
-    if (this.state.can('walkLeft')) {
-      this.state.walkLeft();
     }
   }
   walkRight() {
@@ -125,59 +102,17 @@ class Player extends Phaser.Sprite {
     } else {
       this.body.velocity.x = this.speed;
     }
-
-    if (this.state.can('walkRight')) {
-      this.state.walkRight();
-    }
-  }
-  idle() {
-    if (this.state.cannot('idle')) {
-      return;
-    }
-
-    this.state.idle();
-  }
-  noButtonPressed() {
-    return !(this.upButton.isDown || this.crouchButton.isDown || this.leftButton.isDown || this.rightButton.isDown);
   }
   evaluateState() {
     this.was = {
       inAir: this.inAir,
       onGround: this.onGround,
-      moving: this.moving,
-      onLadder: this.onLadder
+      moving: this.moving
     };
 
-    this.onLadder = this.onLadder && this.climbable && this.canClimb(this.climbable);
     this.inAir = !this.body.touching.down;
     this.onGround = this.body.touching.down;
     this.moving = this.body.velocity.x !== 0;
-  }
-  canClimb(gameObject) {
-    return Math.abs(this.x - gameObject.x) < 10 && gameObject.state.is('grow3');
-  }
-  meetInteractable(gameObject) {
-    if (this.canClimb(gameObject)) {
-      this.climbable = gameObject;
-      return;
-    }
-
-    this.climbable = null;
-  }
-  whenPressingDown() {
-    this.crouch();
-  }
-  whenPressingLeft() {
-    this.walkLeft();
-  }
-  whenPressingRight() {
-    this.walkRight();
-  }
-  whenPressingUp() {
-    this.grow();
-  }
-  whenPressingJump() {
-    this.jump();
   }
   update() {
     this.evaluateState();
@@ -187,25 +122,74 @@ class Player extends Phaser.Sprite {
       this.body.drag.x = 8 * this.speed;
     }
 
-    if (this.crouchButton.isDown) {
-      this.whenPressingDown();
-    } else if (this.leftButton.isDown) {
-      this.whenPressingLeft();
-    } else if (this.rightButton.isDown) {
-      this.whenPressingRight();
-    } else if (this.upButton.isDown) {
-      this.whenPressingUp();
+    this.processInput();
+    this.processActions();
+    this.playAnimation();
+  }
+  processActions() {
+    if (this.jumping && this.stance.is('crouching')) {
+      this.superJump();
+    } else if (this.jumping) {
+      this.jump();
     }
 
-    if (this.jumpButton.isDown) {
-      this.whenPressingJump();
+    if (this.stance.is('crouching')) {
+      this.crouch();
     }
 
-    if (this.noButtonPressed()) {
-      this.idle();
+    if (this.walkingLeft) {
+      this.walkLeft();
     }
 
-    this.animations.play(this.state.current);
+    if (this.walkingRight) {
+      this.walkRight();
+    }
+  }
+  playAnimation() {
+    if (this.walkingLeft) {
+      this.animations.play('walkingLeft');
+    } else if (this.walkingRight) {
+      this.animations.play('walkingRight');
+    } else {
+      this.animations.play(this.stance.current);
+    }
+  }
+  processInput() {
+    if (this.downButton.isDown) {
+      if (this.stance.can('drop')) {
+        this.stance.drop();
+      }
+    } else if (this.stance.can('normal')) {
+      this.stance.normal();
+    }
+
+    if (this.leftButton.isDown && this.stance.is('normal')) {
+      this.walkingLeft = true;
+    } else {
+      this.walkingLeft = false;
+    }
+
+    if (this.rightButton.isDown && this.stance.is('normal')) {
+      this.walkingRight = true;
+    } else {
+      this.walkingRight = false;
+    }
+
+    if (this.upButton.isDown && !this.moving && this.stance.can('rise')) {
+      this.stance.rise();
+    }
+
+    if (this.jumpButton.isDown && this.onGround) {
+      this.jumping = true;
+    } else {
+      this.jumping = false;
+    }
+
+    if (!(this.upButton.isDown || this.downButton.isDown || this.leftButton.isDown || this.rightButton.isDown)) {
+      if (this.stance.can('normal')) {
+        this.stance.normal();
+      }
+    }
   }
 }
 

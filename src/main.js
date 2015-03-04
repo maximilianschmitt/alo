@@ -59,10 +59,10 @@ var game = new Phaser.Game(568, 320, Phaser.AUTO, 'phaser-example', { preload: p
   function update(time) {
     game.physics.arcade.collide(player, floor);
     game.physics.arcade.collide(player2, floor);
-    game.physics.arcade.overlap(player, player2, function(player1, player2) {
-      player1.meetInteractable(player2);
-      player2.meetInteractable(player1);
-    });
+    // game.physics.arcade.overlap(player, player2, function(player1, player2) {
+    //   player1.meetInteractable(player2);
+    //   player2.meetInteractable(player1);
+    // });
     player.update(time);
     player2.update(time);
   }
