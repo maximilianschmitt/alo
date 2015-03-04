@@ -28,12 +28,12 @@ var game = new Phaser.Game(568, 320, Phaser.AUTO, 'phaser-example', { preload: p
     game.sound.mute = true;
     steps = game.add.audio('player-steps', 1, true);
 
-    text = game.add.text(game.world.width/2, 30, 'You don\'t remember this world the way you left it.', {
-      font: '16px Helvetica',
-      fill: 'rgba(255, 255, 255, 0.7)',
-      align: 'center'
-    });
-    text.anchor.setTo(0.5);
+    // text = game.add.text(game.world.width/2, 30, 'You don\'t remember this world the way you left it.', {
+    //   font: '16px Helvetica',
+    //   fill: 'rgba(255, 255, 255, 0.7)',
+    //   align: 'center'
+    // });
+    // text.anchor.setTo(0.5);
     stars = game.add.sprite(0, 0, generateNightSky(game.world.width, Math.round(game.world.height * 2/5)));
 
     floor = game.add.tileSprite(0, game.world.height - 36, game.world.width, 36, 'grass-floor');
@@ -59,7 +59,10 @@ var game = new Phaser.Game(568, 320, Phaser.AUTO, 'phaser-example', { preload: p
   function update(time) {
     game.physics.arcade.collide(player, floor);
     game.physics.arcade.collide(player2, floor);
-    game.physics.arcade.collide(player2, player);
+    game.physics.arcade.overlap(player, player2, function(player1, player2) {
+      player1.meetInteractable(player2);
+      player2.meetInteractable(player1);
+    });
     player.update(time);
     player2.update(time);
   }
@@ -93,5 +96,5 @@ var game = new Phaser.Game(568, 320, Phaser.AUTO, 'phaser-example', { preload: p
   }
 
   function render() {
-    // game.debug.body(player);
+    // game.debug.bodyInfo(player, 20, 20, '#ffffff');
   }

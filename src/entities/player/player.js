@@ -60,7 +60,11 @@ class Player extends Phaser.Sprite {
   }
   crouch() {
     if (this.state.is('crouched') && !this.onGround) {
-      this.body.drag.setTo(0.5 * this.speed, 0);
+      this.body.drag.x = 0.5 * this.speed;
+    }
+
+    if (this.state.is('crouched') && this.onGround) {
+      this.body.drag.x = 1.5 * this.speed;
     }
 
     if (this.state.cannot('crouch')) {
@@ -69,8 +73,8 @@ class Player extends Phaser.Sprite {
     
     this.state.crouch();
 
-    // slide on the ground
-    if (this.state.is('crouched') && this.onGround) {
+    // crouch speed bonus
+    if (this.state.is('crouched')) {
       this.body.velocity.x *= this.crouchSpeedBoost;
     }
 
@@ -80,6 +84,14 @@ class Player extends Phaser.Sprite {
     }
   }
   grow() {
+    if (this.state.is('default') && this.climbable) {
+      this.onLadder = !this.onGround;
+      this.body.gravity.y = 0;
+      this.body.drag.y = 2000;
+      this.body.velocity.y = -200;
+      return;
+    }
+
     if (this.state.cannot('grow')) {
       return;
     }
@@ -97,7 +109,9 @@ class Player extends Phaser.Sprite {
     }
   }
   walkLeft() {
-    if (this.canWalk() && this.body.velocity.x > -this.speed) {
+    if (this.inAir && this.body.velocity.x < -this.speed) {
+      this.body.velocity.x = -this.body.velocity.x;
+    } else {
       this.body.velocity.x = -this.speed;
     }
 
@@ -106,7 +120,9 @@ class Player extends Phaser.Sprite {
     }
   }
   walkRight() {
-    if (this.canWalk() && this.body.velocity.x < this.speed) {
+    if (this.inAir && this.body.velocity.x > this.speed) {
+      this.body.velocity.x = this.body.velocity.x;
+    } else {
       this.body.velocity.x = this.speed;
     }
 
@@ -128,19 +144,32 @@ class Player extends Phaser.Sprite {
     this.was = {
       inAir: this.inAir,
       onGround: this.onGround,
-      moving: this.moving
+      moving: this.moving,
+      onLadder: this.onLadder
     };
 
+    this.onLadder = this.onLadder && this.climbable && this.canClimb(this.climbable);
     this.inAir = !this.body.touching.down;
     this.onGround = this.body.touching.down;
     this.moving = this.body.velocity.x !== 0;
+  }
+  canClimb(gameObject) {
+    return Math.abs(this.x - gameObject.x) < 10 && gameObject.state.is('grow3');
+  }
+  meetInteractable(gameObject) {
+    if (this.canClimb(gameObject)) {
+      this.climbable = gameObject;
+      return;
+    }
+
+    this.climbable = null;
   }
   update() {
     this.evaluateState();
 
     if (this.onGround) {
       this.body.gravity.y = this.defaultGravity;
-      this.body.drag.setTo(1.5 * this.speed, 0);
+      this.body.drag.x = 8 * this.speed;
     }
 
     if (this.crouchButton.isDown) {
