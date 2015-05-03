@@ -6,9 +6,13 @@ This is a little game prototype. Check out the playable version [here](http://al
 
 This project requires node.js. Clone the repository, then, to install, run:
 
-  $ npm install
-  $ bower install
+```
+$ npm install
+$ bower install
+```
 
 To start the development server, run:
 
-  $ npm start
+```
+$ npm start
+```
