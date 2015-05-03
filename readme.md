@@ -1,12 +1,14 @@
-# notes
+# alo
 
-## movement
+This is a little game prototype. Check out the playable version [here](http://alo.maximilianschmitt.me/).
 
-* make player slide after slam-jumping
-  * dont reset drag on ground
-  * reset drag when direction changes on ground
+# Usage
 
-## jumping
+This project requires node.js. Clone the repository, then, to install, run:
 
-* make ladder one-way-collision to stay on top
-* add climb-down functionality
+  $ npm install
+  $ bower install
+
+To start the development server, run:
+
+  $ npm start

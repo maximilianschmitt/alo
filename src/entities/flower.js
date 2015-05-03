@@ -1,7 +1,7 @@
 'use strict';
 
 import Phaser from 'phaser';
-import pixelPainter from '../../util/pixel-painter';
+import pixelPainter from '../util/pixel-painter';
 
 let pedalColors = ['#c15b90', '#73adc4', '#dbd172', '#eb915e'];
 

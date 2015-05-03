@@ -8,17 +8,17 @@ class Player extends Phaser.Sprite {
     if (second) {
       super(game, x, y, 'player-2');
       this.jumpButton = game.input.keyboard.addKey(Phaser.Keyboard.SHIFT);
-      this.leftButton = game.input.keyboard.addKey(Phaser.Keyboard.A);
-      this.rightButton = game.input.keyboard.addKey(Phaser.Keyboard.D);
-      this.downButton = game.input.keyboard.addKey(Phaser.Keyboard.S);
-      this.upButton = game.input.keyboard.addKey(Phaser.Keyboard.W);
-    } else {
-      super(game, x, y, 'player');
-      this.jumpButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
       this.leftButton = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
       this.rightButton = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
       this.downButton = game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
       this.upButton = game.input.keyboard.addKey(Phaser.Keyboard.UP);
+    } else {
+      this.jumpButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+      this.leftButton = game.input.keyboard.addKey(Phaser.Keyboard.A);
+      this.rightButton = game.input.keyboard.addKey(Phaser.Keyboard.D);
+      this.downButton = game.input.keyboard.addKey(Phaser.Keyboard.S);
+      this.upButton = game.input.keyboard.addKey(Phaser.Keyboard.W);
+      super(game, x, y, 'player');
     }
     this.stance = StateMachine.create({
       initial: 'normal',
@@ -35,6 +35,7 @@ class Player extends Phaser.Sprite {
     this.defaultGravity = 2500;
     this.speed = 200;
     this.maxSpeed = 1000;
+    this.acceleration = this.maxSpeed;
     this.jumpSpeed = 625;
     this.superJumpSpeed = 470;
     this.superJumpGravity = 1000;
@@ -50,6 +51,7 @@ class Player extends Phaser.Sprite {
     game.physics.enable(this, Phaser.Physics.ARCADE);
     this.body.gravity.y = this.defaultGravity;
     this.body.collideWorldBounds = true;
+    this.body.maxVelocity.x = this.maxSpeed;
   }
   introducePlayer(player) {
     this.nearbyPlayers.push(player);
@@ -94,14 +96,18 @@ class Player extends Phaser.Sprite {
   walkLeft() {
     if (this.inAir && this.body.velocity.x < -this.speed) {
       this.body.velocity.x = this.body.velocity.x;
-    } else {
+    } else if (this.body.velocity.x > this.speed) {
+      this.body.acceleration.x = -this.acceleration;
+    } else if (this.body.velocity.x > -this.speed) {
       this.body.velocity.x = -this.speed;
     }
   }
   walkRight() {
     if (this.inAir && this.body.velocity.x > this.speed) {
       this.body.velocity.x = this.body.velocity.x;
-    } else {
+    } else if (this.body.velocity.x < -this.speed) {
+      this.body.acceleration.x = this.acceleration;
+    } else if (this.body.velocity.x < this.speed) {
       this.body.velocity.x = this.speed;
     }
   }
@@ -131,16 +137,19 @@ class Player extends Phaser.Sprite {
   update() {
     this.evaluateState();
 
+    this.body.acceleration.x = 0;
+
     if (this.onGround) {
       this.body.gravity.y = this.defaultGravity;
       this.body.drag.x = 8 * this.speed;
       this.body.drag.y = 0;
+      
+      // dont accelerate into infinity
+      // if (Math.abs(this.body.velocity.x) > this.speed) {
+      //   this.body.velocity.x = Math.sign(this.body.velocity.x) * this.speed;
+      // }
     }
 
-    // dont accelerate into infinity
-    if (Math.abs(this.body.velocity.x) > this.maxSpeed) {
-      this.body.velocity.x = Math.sign(this.body.velocity.x) * this.maxSpeed;
-    }
 
     this.processInput();
     this.processActions();
@@ -205,7 +214,7 @@ class Player extends Phaser.Sprite {
       this.walkingRight = false;
     }
 
-    if (this.upButton.isDown) {
+    if (false && this.upButton.isDown) {
       if (this.ladder) {
         this.onLadder = true;
         this.climbing = true;
@@ -217,12 +226,19 @@ class Player extends Phaser.Sprite {
     }
 
     if (this.jumpButton.isDown && this.onGround) {
-      this.jumping = true;
+      if (!this.jumpLocked) {
+        this.jumping = true;
+        this.jumpLocked = true;
+      }
       if (this.stance.is('ladder')) {
         this.stance.drop();
       }
     } else {
       this.jumping = false;
+    }
+
+    if (!this.jumpButton.isDown) {
+      this.jumpLocked = false;
     }
 
     if (!(this.upButton.isDown || this.downButton.isDown || this.leftButton.isDown || this.rightButton.isDown)) {
